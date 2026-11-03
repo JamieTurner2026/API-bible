@@ -18,7 +18,7 @@ Add `?translation=<id>` to any endpoint to choose one. Without it you get the BS
 
 ## Run it
 
-Requires Node.js 18 or newer.
+Requires Node.js 22 (18+ works locally).
 
 ```bash
 npm start            # http://localhost:3000  (set PORT to change)
