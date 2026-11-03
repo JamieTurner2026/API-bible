@@ -1,7 +1,7 @@
 {
   "name": "api-bible",
   "version": "1.0.0",
-  "description": "Self-hosted REST API serving every book, chapter and verse of the Bible (KJV).",
+  "description": "Self-hosted REST API serving every book, chapter and verse of the Bible (Berean Standard Bible).",
   "main": "src/server.js",
   "scripts": {
     "start": "node src/server.js",

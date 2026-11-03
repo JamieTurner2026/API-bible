@@ -74,12 +74,22 @@ test('passage references', async () => {
 });
 
 test('search', async () => {
-  const { body } = await get('/search?q=begotten%20son&book=John');
+  const { body } = await get('/search?q=one%20and%20only%20Son&book=John');
   assert.ok(body.total >= 2);
   assert.ok(body.results.every((r) => r.bookId === 'John'));
   const paged = await get('/search?q=love&limit=5&offset=5');
   assert.strictEqual(paged.body.results.length, 5);
   assert.strictEqual((await get('/search?q=a')).status, 400);
+});
+
+test('verses omitted by the BSB keep their numbering and are flagged', async () => {
+  const v = await get('/books/matthew/chapters/17/verses/21');
+  assert.strictEqual(v.status, 200);
+  assert.strictEqual(v.body.omitted, true);
+  assert.ok(v.body.note);
+  const p = await get('/passage?ref=Matt 17:20-22');
+  assert.strictEqual(p.body.verses.length, 3);
+  assert.ok(!p.body.text.includes('  '));
 });
 
 test('random verse', async () => {

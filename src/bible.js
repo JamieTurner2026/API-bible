@@ -2,7 +2,7 @@
 const path = require('path');
 const { BOOKS, findBook } = require('./books');
 
-const DATA = require(path.join(__dirname, '..', 'data', 'kjv.json'));
+const DATA = require(path.join(__dirname, '..', 'data', 'bsb.json'));
 const TEXT = new Map(DATA.books.map((b) => [b.id, b.chapters]));
 
 class NotFound extends Error {}
@@ -37,8 +37,16 @@ function chapterText(b, chapter) {
   return verses;
 }
 
+const OMITTED_NOTE = 'This verse is not included in the BSB, which follows the earliest manuscripts; '
+  + 'it appears in some later manuscripts.';
+
 function verseObj(b, chapter, verse, text) {
-  return { book: b.name, bookId: b.id, chapter, verse, reference: `${b.name} ${chapter}:${verse}`, text };
+  const v = { book: b.name, bookId: b.id, chapter, verse, reference: `${b.name} ${chapter}:${verse}`, text };
+  if (text === '') {
+    v.omitted = true;
+    v.note = OMITTED_NOTE;
+  }
+  return v;
 }
 
 function listBooks(testament) {
@@ -68,7 +76,9 @@ function getChapter(bookQuery, chapterValue) {
     bookId: b.id,
     chapter,
     reference: `${b.name} ${chapter}`,
-    verses: verses.map((text, i) => ({ verse: i + 1, text })),
+    verses: verses.map((text, i) => (text === ''
+      ? { verse: i + 1, text, omitted: true, note: OMITTED_NOTE }
+      : { verse: i + 1, text })),
   };
 }
 
@@ -132,7 +142,7 @@ function getPassage(ref) {
   if (verses.length > 1) {
     reference += last.chapter === first.chapter ? `-${last.verse}` : `-${last.chapter}:${last.verse}`;
   }
-  return { reference, translation: DATA.translation.id, verses, text: verses.map((v) => v.text).join(' ') };
+  return { reference, translation: DATA.translation.id, verses, text: verses.map((v) => v.text).filter(Boolean).join(' ') };
 }
 
 function search(query, { limit = 50, offset = 0, book, testament } = {}) {
@@ -171,6 +181,7 @@ function randomVerse(rand = Math.random) {
   const chapters = TEXT.get(b.id);
   const ci = Math.floor(rand() * chapters.length);
   const vi = Math.floor(rand() * chapters[ci].length);
+  if (chapters[ci][vi] === '') return randomVerse(rand); // skip the few omitted verses
   return verseObj(b, ci + 1, vi + 1, chapters[ci][vi]);
 }
 
