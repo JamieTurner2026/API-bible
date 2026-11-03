@@ -73,6 +73,7 @@ function verseObj(t, b, chapter, verse, text) {
     chapter,
     verse,
     reference: `${b.name} ${chapter}:${verse}`,
+    verseId: `${b.usfm}.${chapter}.${verse}`,
     text,
   });
 }
@@ -87,6 +88,7 @@ function listBooks(testament) {
   return BOOKS.filter((b) => !t || b.testament === t).map((b) => ({
     number: b.number,
     id: b.id,
+    usfm: b.usfm,
     name: b.name,
     slug: b.slug,
     testament: b.testament,
@@ -102,6 +104,7 @@ function getBook(query, translation) {
     translation: t.meta.id,
     number: b.number,
     id: b.id,
+    usfm: b.usfm,
     name: b.name,
     slug: b.slug,
     testament: b.testament,
@@ -120,7 +123,11 @@ function getChapter(bookQuery, chapterValue, translation) {
     bookId: b.id,
     chapter,
     reference: `${b.name} ${chapter}`,
-    verses: chapterText(t, b, chapter).map((text, i) => annotate(t, b, chapter, i + 1, { verse: i + 1, text })),
+    verses: chapterText(t, b, chapter).map((text, i) => annotate(t, b, chapter, i + 1, {
+      verse: i + 1,
+      verseId: `${b.usfm}.${chapter}.${i + 1}`,
+      text,
+    })),
   };
 }
 

@@ -15,8 +15,14 @@ test.after(() => server.close());
 
 async function get(path) {
   const res = await fetch(base + path);
-  return { status: res.status, body: await res.json() };
+  return { status: res.status, headers: res.headers, body: await res.json() };
 }
+
+test('scripture responses are cacheable; random and errors are not', async () => {
+  assert.match((await get('/books/john/chapters/3')).headers.get('cache-control'), /s-maxage=86400/);
+  assert.strictEqual((await get('/random')).headers.get('cache-control'), 'no-store');
+  assert.strictEqual((await get('/books/nope')).headers.get('cache-control'), 'no-store');
+});
 
 test('root reports every translation as a complete Bible', async () => {
   const { status, body } = await get('/');
@@ -90,6 +96,16 @@ test('book lookup accepts names, slugs, ids, abbreviations and numbers', async (
   }
   assert.strictEqual((await get('/books/Psalms')).body.chapters, 150);
   assert.strictEqual((await get('/books/nope')).status, 404);
+});
+
+test('USFM book codes (as used by API.Bible) resolve to the right book', async () => {
+  const { BOOKS, findBook } = require('../src/books');
+  for (const b of BOOKS) assert.strictEqual(findBook(b.usfm), b, b.usfm);
+  const v = await get('/books/SNG/chapters/2/verses/1');
+  assert.strictEqual(v.body.book, 'Song of Solomon');
+  assert.strictEqual(v.body.verseId, 'SNG.2.1');
+  const ch = await get('/books/1JN/chapters/4');
+  assert.strictEqual(ch.body.verses[18].verseId, '1JN.4.19');
 });
 
 test('chapter and verse', async () => {

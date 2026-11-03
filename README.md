@@ -49,7 +49,9 @@ redeploys it.
 
 `:book` is forgiving: `John`, `john`, `1 John`, `1-john`, `1John`, `1jn`,
 `I John`, `First John`, `62` (book number) and unique prefixes like `phile`
-all work.
+all work, as do USFM codes such as `JHN`, `SNG` and `1JN`
+(the codes API.Bible uses). Every verse includes a USFM-style `verseId`
+(`JHN.3.16`).
 
 ### Passage references
 

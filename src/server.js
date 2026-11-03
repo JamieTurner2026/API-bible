@@ -41,10 +41,14 @@ const ROUTES = [
   return { re, keys, handler };
 });
 
-function send(res, status, body) {
+// Scripture never changes, so successful responses can be cached by browsers and the CDN for a day.
+const CACHE_OK = 'public, max-age=3600, s-maxage=86400, stale-while-revalidate=604800';
+
+function send(res, status, body, cache = status === 200 ? CACHE_OK : 'no-store') {
   res.writeHead(status, {
     'Content-Type': 'application/json; charset=utf-8',
     'Access-Control-Allow-Origin': '*',
+    'Cache-Control': cache,
   });
   res.end(JSON.stringify(body, null, 2));
 }
@@ -63,7 +67,7 @@ function handle(req, res) {
     const params = {};
     try {
       keys.forEach((k, i) => (params[k] = decodeURIComponent(m[i + 1])));
-      return send(res, 200, handler(params, url.searchParams));
+      return send(res, 200, handler(params, url.searchParams), url.pathname.startsWith('/random') ? 'no-store' : undefined);
     } catch (err) {
       if (err instanceof bible.NotFound) return send(res, 404, { error: err.message });
       if (err instanceof bible.BadRequest || err instanceof URIError) return send(res, 400, { error: err.message });

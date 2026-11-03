@@ -1,5 +1,14 @@
 'use strict';
 
+// USFM / Paratext book codes (used by API.Bible and many other tools), in canonical order.
+const USFM = [
+  'GEN', 'EXO', 'LEV', 'NUM', 'DEU', 'JOS', 'JDG', 'RUT', '1SA', '2SA', '1KI', '2KI', '1CH', '2CH',
+  'EZR', 'NEH', 'EST', 'JOB', 'PSA', 'PRO', 'ECC', 'SNG', 'ISA', 'JER', 'LAM', 'EZK', 'DAN', 'HOS',
+  'JOL', 'AMO', 'OBA', 'JON', 'MIC', 'NAM', 'HAB', 'ZEP', 'HAG', 'ZEC', 'MAL', 'MAT', 'MRK', 'LUK',
+  'JHN', 'ACT', 'ROM', '1CO', '2CO', 'GAL', 'EPH', 'PHP', 'COL', '1TH', '2TH', '1TI', '2TI', 'TIT',
+  'PHM', 'HEB', 'JAS', '1PE', '2PE', '1JN', '2JN', '3JN', 'JUD', 'REV',
+];
+
 // Canonical list of the 66 books (Protestant canon), in order.
 // id: OSIS-style identifier; aliases: extra names/abbreviations accepted in lookups.
 const BOOKS = [
@@ -72,6 +81,7 @@ const BOOKS = [
 ].map(([id, name, testament, aliases], i) => ({
   number: i + 1,
   id,
+  usfm: USFM[i],
   name,
   slug: name.toLowerCase().replace(/\s+/g, '-'),
   testament,
@@ -94,6 +104,8 @@ for (const b of BOOKS) {
     INDEX.set(normalize(key), b);
   }
 }
+// USFM codes are set last so they always win over a looser alias.
+for (const b of BOOKS) INDEX.set(normalize(b.usfm), b);
 
 function findBook(query) {
   if (query == null || query === '') return null;
