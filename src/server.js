@@ -1,0 +1,79 @@
+'use strict';
+const http = require('http');
+const bible = require('./bible');
+
+const ROUTES = [
+  ['/', () => ({
+    name: 'API Bible',
+    ...bible.stats(),
+    endpoints: {
+      'GET /books': 'List all books (?testament=OT|NT)',
+      'GET /books/:book': 'Book details with verse counts per chapter',
+      'GET /books/:book/chapters/:chapter': 'All verses in a chapter',
+      'GET /books/:book/chapters/:chapter/verses/:verse': 'A single verse',
+      'GET /passage?ref=John 3:16-18': 'Look up a reference or range',
+      'GET /search?q=love&limit=50&offset=0&book=John&testament=NT': 'Full-text search',
+      'GET /random': 'A random verse',
+    },
+  })],
+  ['/books', (p, q) => bible.listBooks(q.get('testament'))],
+  ['/books/:book', (p) => bible.getBook(p.book)],
+  ['/books/:book/chapters/:chapter', (p) => bible.getChapter(p.book, p.chapter)],
+  ['/books/:book/chapters/:chapter/verses/:verse', (p) => bible.getVerse(p.book, p.chapter, p.verse)],
+  ['/passage', (p, q) => bible.getPassage(q.get('ref'))],
+  ['/search', (p, q) => bible.search(q.get('q'), {
+    limit: q.get('limit') || 50,
+    offset: q.get('offset') || 0,
+    book: q.get('book'),
+    testament: q.get('testament'),
+  })],
+  ['/random', () => bible.randomVerse()],
+].map(([pattern, handler]) => {
+  const keys = [];
+  const re = new RegExp('^' + pattern.replace(/:(\w+)/g, (_, k) => (keys.push(k), '([^/]+)')) + '/?$');
+  return { re, keys, handler };
+});
+
+function send(res, status, body) {
+  res.writeHead(status, {
+    'Content-Type': 'application/json; charset=utf-8',
+    'Access-Control-Allow-Origin': '*',
+  });
+  res.end(JSON.stringify(body, null, 2));
+}
+
+function handle(req, res) {
+  if (req.method === 'OPTIONS') {
+    res.writeHead(204, { 'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Methods': 'GET, OPTIONS' });
+    return res.end();
+  }
+  if (req.method !== 'GET') return send(res, 405, { error: 'Method not allowed' });
+
+  const url = new URL(req.url, 'http://localhost');
+  for (const { re, keys, handler } of ROUTES) {
+    const m = re.exec(url.pathname);
+    if (!m) continue;
+    const params = {};
+    try {
+      keys.forEach((k, i) => (params[k] = decodeURIComponent(m[i + 1])));
+      return send(res, 200, handler(params, url.searchParams));
+    } catch (err) {
+      if (err instanceof bible.NotFound) return send(res, 404, { error: err.message });
+      if (err instanceof bible.BadRequest || err instanceof URIError) return send(res, 400, { error: err.message });
+      console.error(err);
+      return send(res, 500, { error: 'Internal server error' });
+    }
+  }
+  send(res, 404, { error: `No route for ${url.pathname}` });
+}
+
+function createServer() {
+  return http.createServer(handle);
+}
+
+if (require.main === module) {
+  const port = Number(process.env.PORT) || 3000;
+  createServer().listen(port, () => console.log(`API Bible listening on http://localhost:${port}`));
+}
+
+module.exports = { createServer };
