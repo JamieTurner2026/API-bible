@@ -83,4 +83,4 @@ if (require.main === module) {
   createServer().listen(port, () => console.log(`API Bible listening on http://localhost:${port}`));
 }
 
-module.exports = { createServer };
+module.exports = { createServer, handle };

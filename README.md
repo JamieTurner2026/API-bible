@@ -25,6 +25,13 @@ npm start            # http://localhost:3000  (set PORT to change)
 npm test
 ```
 
+## Deploying
+
+The repo is set up for [Vercel](https://vercel.com): `api/index.js` runs the
+API as a serverless function and `vercel.json` sends every path to it. Import
+the GitHub repo into Vercel (no build settings needed) and each push to `main`
+redeploys it.
+
 ## Endpoints
 
 | Method & path | What it returns |
@@ -116,6 +123,7 @@ data/<id>.json           the full text of each translation
 src/books.js             book names, abbreviations and lookup
 src/bible.js             translation/chapter/verse/passage/search logic
 src/server.js            HTTP server and routes
+api/index.js             Vercel serverless entry point (with vercel.json)
 scripts/import.js        rebuilds data/<id>.json from a source text
 test/api.test.js         tests
 ```
