@@ -18,12 +18,62 @@ async function get(path) {
   return { status: res.status, body: await res.json() };
 }
 
-test('root reports full Bible stats', async () => {
+test('root reports every translation as a complete Bible', async () => {
   const { status, body } = await get('/');
   assert.strictEqual(status, 200);
-  assert.strictEqual(body.books, 66);
-  assert.strictEqual(body.chapters, 1189);
-  assert.strictEqual(body.verses, 31102);
+  assert.strictEqual(body.defaultTranslation, 'bsb');
+  assert.deepStrictEqual(body.translations.map((t) => t.id).sort(), ['asv', 'bsb', 'web']);
+  for (const t of body.translations) {
+    assert.strictEqual(t.books, 66, t.id);
+    assert.strictEqual(t.chapters, 1189, t.id);
+    assert.ok(t.verses > 31000, t.id);
+  }
+});
+
+test('lists translations with BSB as the default', async () => {
+  const { body } = await get('/translations');
+  assert.strictEqual(body.length, 3);
+  assert.strictEqual(body.find((t) => t.default).id, 'bsb');
+  assert.ok(body.every((t) => t.license === 'Public Domain'));
+});
+
+test('choosing a translation', async () => {
+  const expected = {
+    bsb: /^For God so loved the world that He gave His one and only Son/,
+    web: /^For God so loved the world, that he gave his one and only Son, that whoever believes/,
+    asv: /^For God so loved the world, that he gave his only begotten Son/,
+  };
+  for (const [id, re] of Object.entries(expected)) {
+    const { status, body } = await get(`/books/john/chapters/3/verses/16?translation=${id}`);
+    assert.strictEqual(status, 200, id);
+    assert.strictEqual(body.translation, id);
+    assert.match(body.text, re, id);
+  }
+  assert.strictEqual((await get('/books/john/chapters/3/verses/16')).body.translation, 'bsb');
+  assert.strictEqual((await get('/books/john/chapters/3/verses/16?translation=WEB')).body.translation, 'web');
+  assert.match((await get('/passage?ref=Ps 23:1&translation=web')).body.text, /Yahweh is my shepherd/);
+  assert.match((await get('/search?q=Jehovah&translation=asv&limit=1')).body.results[0].text, /Jehovah/);
+  const bad = await get('/books/john/chapters/3/verses/16?translation=niv');
+  assert.strictEqual(bad.status, 400);
+  assert.match(bad.body.error, /Available: asv, bsb, web/);
+});
+
+test('compare a passage across translations', async () => {
+  const all = await get('/compare?ref=John 3:16');
+  assert.strictEqual(all.status, 200);
+  assert.strictEqual(all.body.reference, 'John 3:16');
+  assert.strictEqual(all.body.translations.length, 3);
+  const two = await get('/compare?ref=Ps 23:1-2&translations=asv,web');
+  assert.deepStrictEqual(two.body.translations.map((t) => t.translation), ['asv', 'web']);
+  assert.strictEqual(two.body.translations[0].verses.length, 2);
+});
+
+test('WEB places the Romans doxology at 14:24-26', async () => {
+  assert.strictEqual((await get('/books/romans/chapters/14/verses/26?translation=web')).status, 200);
+  assert.strictEqual((await get('/books/romans/chapters/14/verses/26')).status, 404);
+  const r = await get('/books/romans/chapters/16/verses/25?translation=web');
+  assert.strictEqual(r.body.omitted, true);
+  assert.match(r.body.note, /Romans 14:24-26/);
 });
 
 test('lists books and filters by testament', async () => {
